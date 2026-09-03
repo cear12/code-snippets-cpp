@@ -7,14 +7,12 @@ namespace adl_demo {
 
 struct Foo {};
 
-void Func(Foo) {
-    std::cout << "adl_demo::func(Foo) called via ADL\n";
-}
+void Func(Foo) { std::cout << "adl_demo::func(Foo) called via ADL\n"; }
 
 } // namespace adl_demo
 
 int main() {
-    adl_demo::Foo foo;
-    Func(foo); // no "adl_demo::" needed: ADL finds it from foo's type
-    return 0;
+  adl_demo::Foo foo;
+  Func(foo); // no "adl_demo::" needed: ADL finds it from foo's type
+  return 0;
 }

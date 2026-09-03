@@ -5,28 +5,23 @@
 
 enum Type { kTypeA, kTypeB };
 
-template <int>
-struct GenericType final {};
+template <int> struct GenericType final {};
 
 static GenericType<kTypeA> g_generic_type_a;
 static GenericType<kTypeB> g_generic_type_b;
 
-void Print(GenericType<kTypeA>) {
-    std::cout << "TypeA\n";
-}
+void Print(GenericType<kTypeA>) { std::cout << "TypeA\n"; }
 
-void Print(GenericType<kTypeB>) {
-    std::cout << "TypeB\n";
-}
+void Print(GenericType<kTypeB>) { std::cout << "TypeB\n"; }
 
 int main() {
-    // style a: construct a temporary of the tag type
-    Print(GenericType<kTypeA>{});
-    Print(GenericType<kTypeB>{});
+  // style a: construct a temporary of the tag type
+  Print(GenericType<kTypeA>{});
+  Print(GenericType<kTypeB>{});
 
-    // style b: reuse a pre-existing tag instance
-    Print(g_generic_type_a);
-    Print(g_generic_type_b);
+  // style b: reuse a pre-existing tag instance
+  Print(g_generic_type_a);
+  Print(g_generic_type_b);
 
-    return 0;
+  return 0;
 }

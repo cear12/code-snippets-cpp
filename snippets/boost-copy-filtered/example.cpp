@@ -12,22 +12,22 @@
 #include <boost/range/algorithm/copy.hpp>
 
 struct Person {
-    std::string name;
-    bool isFemale;
+  std::string name;
+  bool isFemale;
 };
 
 int main() {
-    std::vector<Person> people{
-        {"Alice", true}, {"Bob", false}, {"Carol", true}, {"Dave", false}};
+  std::vector<Person> people{
+      {"Alice", true}, {"Bob", false}, {"Carol", true}, {"Dave", false}};
 
-    auto isFemale = [](const Person& p) { return p.isFemale; };
+  auto isFemale = [](const Person &p) { return p.isFemale; };
 
-    std::cout << "Female names: ";
-    boost::copy(
-        people | boost::adaptors::filtered(isFemale) |
-            boost::adaptors::transformed([](const Person& p) { return p.name; }),
-        std::ostream_iterator<std::string>(std::cout, " "));
-    std::cout << "\n";
+  std::cout << "Female names: ";
+  boost::copy(
+      people | boost::adaptors::filtered(isFemale) |
+          boost::adaptors::transformed([](const Person &p) { return p.name; }),
+      std::ostream_iterator<std::string>(std::cout, " "));
+  std::cout << "\n";
 
-    return 0;
+  return 0;
 }

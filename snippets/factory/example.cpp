@@ -17,31 +17,33 @@ namespace core {
 
 class ICryptoProvider {
 public:
-    virtual ~ICryptoProvider() = default;
-    virtual void DoWork() = 0;
+  virtual ~ICryptoProvider() = default;
+  virtual void DoWork() = 0;
 };
 
 class CryptoProviderFactory {
 public:
-    using Creator = std::function<std::unique_ptr<ICryptoProvider>()>;
+  using Creator = std::function<std::unique_ptr<ICryptoProvider>()>;
 
-    static CryptoProviderFactory& instance() {
-        static CryptoProviderFactory factory;
-        return factory;
+  static CryptoProviderFactory &instance() {
+    static CryptoProviderFactory factory;
+    return factory;
+  }
+
+  void registerType(const std::string &id, Creator creator) {
+    creators_[id] = std::move(creator);
+  }
+
+  std::unique_ptr<ICryptoProvider> Create(const std::string &id) const {
+    auto it = creators_.find(id);
+    if (it == creators_.end()) {
+      throw std::runtime_error("Unknown crypto provider id: " + id);
     }
-
-    void registerType(const std::string& id, Creator creator) { creators_[id] = std::move(creator); }
-
-    std::unique_ptr<ICryptoProvider> Create(const std::string& id) const {
-        auto it = creators_.find(id);
-        if (it == creators_.end()) {
-            throw std::runtime_error("Unknown crypto provider id: " + id);
-        }
-        return it->second();
-    }
+    return it->second();
+  }
 
 private:
-    std::unordered_map<std::string, Creator> creators_;
+  std::unordered_map<std::string, Creator> creators_;
 };
 
 } // namespace core
@@ -57,17 +59,17 @@ private:
 // and instance instead get a __LINE__-derived unique name, and the
 // registration id is passed explicitly rather than stringized from
 // DerivedClass.
-#define REGISTER_CLASS(DerivedClass, BaseClass, IdString)                          \
-    static_assert(std::is_base_of_v<BaseClass, DerivedClass>,                      \
-                  #DerivedClass " must inherit from " #BaseClass);                 \
-    namespace {                                                                    \
-    struct REGISTER_CLASS_CONCAT(Registrar_, __LINE__) {                           \
-        REGISTER_CLASS_CONCAT(Registrar_, __LINE__)() {                            \
-            core::CryptoProviderFactory::instance().registerType(                  \
-                IdString, [] { return std::make_unique<DerivedClass>(); });        \
-        }                                                                          \
-    } REGISTER_CLASS_CONCAT(registrar_instance_, __LINE__);                        \
-    }
+#define REGISTER_CLASS(DerivedClass, BaseClass, IdString)                      \
+  static_assert(std::is_base_of_v<BaseClass, DerivedClass>,                    \
+                #DerivedClass " must inherit from " #BaseClass);               \
+  namespace {                                                                  \
+  struct REGISTER_CLASS_CONCAT(Registrar_, __LINE__) {                         \
+    REGISTER_CLASS_CONCAT(Registrar_, __LINE__)() {                            \
+      core::CryptoProviderFactory::instance().registerType(                    \
+          IdString, [] { return std::make_unique<DerivedClass>(); });          \
+    }                                                                          \
+  } REGISTER_CLASS_CONCAT(registrar_instance_, __LINE__);                      \
+  }
 
 // ============================================================
 // "wincrypt" project: depends on core, core does not depend on it.
@@ -76,12 +78,15 @@ namespace wincrypt {
 
 class WincryptProvider : public core::ICryptoProvider {
 public:
-    void DoWork() override { std::cout << "WincryptProvider: signing via Windows CryptoAPI\n"; }
+  void DoWork() override {
+    std::cout << "WincryptProvider: signing via Windows CryptoAPI\n";
+  }
 };
 
 } // namespace wincrypt
 
-REGISTER_CLASS(wincrypt::WincryptProvider, core::ICryptoProvider, "WincryptProvider");
+REGISTER_CLASS(wincrypt::WincryptProvider, core::ICryptoProvider,
+               "WincryptProvider");
 
 // ============================================================
 // "cryptoki" project: also depends on core, and not on wincrypt either.
@@ -90,32 +95,35 @@ namespace cryptoki {
 
 class CryptokiProvider : public core::ICryptoProvider {
 public:
-    void DoWork() override { std::cout << "CryptokiProvider: signing via a PKCS#11 token\n"; }
+  void DoWork() override {
+    std::cout << "CryptokiProvider: signing via a PKCS#11 token\n";
+  }
 };
 
 } // namespace cryptoki
 
-REGISTER_CLASS(cryptoki::CryptokiProvider, core::ICryptoProvider, "CryptokiProvider");
+REGISTER_CLASS(cryptoki::CryptokiProvider, core::ICryptoProvider,
+               "CryptokiProvider");
 
 // ============================================================
 // Application: only ever names the id strings, never the concrete types.
 // ============================================================
 int main() {
-    for (const auto& id : {"WincryptProvider", "CryptokiProvider"}) {
-        try {
-            auto provider = core::CryptoProviderFactory::instance().Create(id);
-            provider->DoWork();
-        } catch (const std::exception& e) {
-            std::cerr << "Error creating '" << id << "': " << e.what() << "\n";
-        }
-    }
-
-    // Unknown id: exercises the error path.
+  for (const auto &id : {"WincryptProvider", "CryptokiProvider"}) {
     try {
-        core::CryptoProviderFactory::instance().Create("NonexistentProvider");
-    } catch (const std::exception& e) {
-        std::cout << "Expected failure: " << e.what() << "\n";
+      auto provider = core::CryptoProviderFactory::instance().Create(id);
+      provider->DoWork();
+    } catch (const std::exception &e) {
+      std::cerr << "Error creating '" << id << "': " << e.what() << "\n";
     }
+  }
 
-    return 0;
+  // Unknown id: exercises the error path.
+  try {
+    core::CryptoProviderFactory::instance().Create("NonexistentProvider");
+  } catch (const std::exception &e) {
+    std::cout << "Expected failure: " << e.what() << "\n";
+  }
+
+  return 0;
 }

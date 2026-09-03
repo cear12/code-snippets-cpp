@@ -7,52 +7,49 @@
 #include <string>
 #include <utility>
 
-template <typename Callable>
-class DebugDecorator {
+template <typename Callable> class DebugDecorator {
 public:
-    DebugDecorator(const Callable& c, const char* label) : c_(c), label_(label) {}
+  DebugDecorator(const Callable &c, const char *label) : c_(c), label_(label) {}
 
-    template <typename... Args>
-    auto operator()(Args&&... args) const {
-        std::cout << "Calling " << label_ << "\n";
-        auto result = c_(std::forward<Args>(args)...);
-        std::cout << "Result: " << result << "\n";
-        return result;
-    }
+  template <typename... Args> auto operator()(Args &&...args) const {
+    std::cout << "Calling " << label_ << "\n";
+    auto result = c_(std::forward<Args>(args)...);
+    std::cout << "Result: " << result << "\n";
+    return result;
+  }
 
 private:
-    const Callable& c_;
-    std::string label_;
+  const Callable &c_;
+  std::string label_;
 };
 
 template <typename Callable>
-auto DecorateDebug(const Callable& c, const char* label) {
-    return DebugDecorator<Callable>(c, label);
+auto DecorateDebug(const Callable &c, const char *label) {
+  return DebugDecorator<Callable>(c, label);
 }
 
-int Subtract(int a, int b) {
-    return a - b;
-}
+int Subtract(int a, int b) { return a - b; }
 
 struct RandomRatio {
-    double operator()() const {
-        return double(std::rand() + 1) / double(std::rand() + 1);
-    }
+  double operator()() const {
+    return double(std::rand() + 1) / double(std::rand() + 1);
+  }
 };
 
 int main() {
-    std::srand(static_cast<unsigned>(std::time(nullptr)));
+  std::srand(static_cast<unsigned>(std::time(nullptr)));
 
-    auto decorated_subtract = DecorateDebug(Subtract, "subtract()");
-    decorated_subtract(5, 2);
+  auto decorated_subtract = DecorateDebug(Subtract, "subtract()");
+  decorated_subtract(5, 2);
 
-    RandomRatio random_ratio;
-    auto decorated_ratio = DecorateDebug(random_ratio, "rand/rand");
-    decorated_ratio();
-    decorated_ratio();
+  RandomRatio random_ratio;
+  auto decorated_ratio = DecorateDebug(random_ratio, "rand/rand");
+  decorated_ratio();
+  decorated_ratio();
 
-    auto decorated_lambda = DecorateDebug([](int t, int j) { return t + j; }, "t+j");
-    decorated_lambda(5, 3);
+  auto decorated_lambda =
+      DecorateDebug([](int t, int j) { return t + j; }, "t+j");
+  decorated_lambda(5, 3);
 
-    return 0;
+  return 0;
 }

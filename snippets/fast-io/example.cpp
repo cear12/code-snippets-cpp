@@ -4,17 +4,17 @@
 #include <iostream>
 
 static const auto kFastIo = []() {
-    std::ios_base::sync_with_stdio(false); // ios_base: applies process-wide
-    std::cin.tie(nullptr);                 // ios: applies to this stream only
-    return 0;
+  std::ios_base::sync_with_stdio(false); // ios_base: applies process-wide
+  std::cin.tie(nullptr);                 // ios: applies to this stream only
+  return 0;
 }();
 
 int main() {
-    std::cout << "fast I/O configured before main() started\n";
+  std::cout << "fast I/O configured before main() started\n";
 
-    for (int i = 0; i < 5; ++i) {
-        std::cout << "line " << i << "\n";
-    }
+  for (int i = 0; i < 5; ++i) {
+    std::cout << "line " << i << "\n";
+  }
 
-    return 0;
+  return 0;
 }

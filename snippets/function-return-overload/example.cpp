@@ -5,22 +5,22 @@
 #include <string>
 
 struct Foo {
-    int a_ = 10;
-    int b_ = 20;
+  int a_ = 10;
+  int b_ = 20;
 };
 
 struct Func {
-    operator std::string() const { return "10"; }
-    operator unsigned() const { return 2; }
-    operator Foo() const { return {100, 200}; }
+  operator std::string() const { return "10"; }
+  operator unsigned() const { return 2; }
+  operator Foo() const { return {100, 200}; }
 };
 
 int main() {
-    std::cout << static_cast<std::string>(Func()) << "\n"; // context: std::string
-    std::cout << static_cast<unsigned>(Func()) << "\n";     // context: unsigned
+  std::cout << static_cast<std::string>(Func()) << "\n"; // context: std::string
+  std::cout << static_cast<unsigned>(Func()) << "\n";    // context: unsigned
 
-    auto val = Foo(Func()).a_; // context: Foo
-    std::cout << val << "\n";
+  auto val = Foo(Func()).a_; // context: Foo
+  std::cout << val << "\n";
 
-    return 0;
+  return 0;
 }

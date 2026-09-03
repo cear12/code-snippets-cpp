@@ -6,24 +6,22 @@
 #include <memory>
 
 struct IProduct {
-    virtual void Foo() = 0;
-    virtual ~IProduct() = default;
+  virtual void Foo() = 0;
+  virtual ~IProduct() = default;
 };
 
 struct ConcreteProduct : IProduct {
-    void Foo() override {
-        std::cout << "ConcreteProduct created and used\n";
-    }
+  void Foo() override { std::cout << "ConcreteProduct created and used\n"; }
 };
 
 using Factory = std::function<std::unique_ptr<IProduct>()>;
 
-void Client(const Factory& make_product) {
-    auto product = make_product();
-    product->Foo();
+void Client(const Factory &make_product) {
+  auto product = make_product();
+  product->Foo();
 }
 
 int main() {
-    Client([] { return std::make_unique<ConcreteProduct>(); });
-    return 0;
+  Client([] { return std::make_unique<ConcreteProduct>(); });
+  return 0;
 }

@@ -8,20 +8,21 @@
 #include <iostream>
 
 int main() {
-    boost::shared_ptr<int> p;
+  boost::shared_ptr<int> p;
 
-    constexpr int kIterations = 1'000'000;
-    auto start = std::chrono::steady_clock::now();
+  constexpr int kIterations = 1'000'000;
+  auto start = std::chrono::steady_clock::now();
 
-    for (int i = 0; i < kIterations; ++i) {
-        p.reset(new int{i});
-    }
+  for (int i = 0; i < kIterations; ++i) {
+    p.reset(new int{i});
+  }
 
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start);
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now() - start);
 
-    std::cout << kIterations << " shared_ptr resets took " << elapsed.count() << " ms"
-              << " (using the quick allocator for control blocks)\n";
+  std::cout << kIterations << " shared_ptr resets took " << elapsed.count()
+            << " ms"
+            << " (using the quick allocator for control blocks)\n";
 
-    return 0;
+  return 0;
 }

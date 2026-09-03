@@ -7,16 +7,16 @@
 #include <string>
 
 std::string MaybeBreaksNrvo() {
-    if (false) {
-        return std::string("never get here"); // an earlier, different return value
-    }
+  if (false) {
+    return std::string("never get here"); // an earlier, different return value
+  }
 
-    std::string s = "Hi!";
-    return s; // NRVO-eligible in principle; some compilers stop optimizing
-              // this once they've seen the unreachable return above
+  std::string s = "Hi!";
+  return s; // NRVO-eligible in principle; some compilers stop optimizing
+            // this once they've seen the unreachable return above
 }
 
 int main() {
-    std::cout << MaybeBreaksNrvo() << "\n";
-    return 0;
+  std::cout << MaybeBreaksNrvo() << "\n";
+  return 0;
 }

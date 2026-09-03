@@ -6,20 +6,20 @@
 struct Empty {};
 
 struct EmptyAsMember {
-    Empty e_;
-    int i_;
+  Empty e_;
+  int i_;
 };
 
 struct EmptyAsBase : Empty {
-    int i_;
+  int i_;
 };
 
 int main() {
-    std::cout << "sizeof(Empty)         = " << sizeof(Empty) << " (never 0)\n";
-    std::cout << "sizeof(int)            = " << sizeof(int) << "\n";
-    std::cout << "sizeof(EmptyAsMember)  = " << sizeof(EmptyAsMember)
-              << " (Empty as a member costs real space)\n";
-    std::cout << "sizeof(EmptyAsBase)    = " << sizeof(EmptyAsBase)
-              << " (Empty as a base is typically free)\n";
-    return 0;
+  std::cout << "sizeof(Empty)         = " << sizeof(Empty) << " (never 0)\n";
+  std::cout << "sizeof(int)            = " << sizeof(int) << "\n";
+  std::cout << "sizeof(EmptyAsMember)  = " << sizeof(EmptyAsMember)
+            << " (Empty as a member costs real space)\n";
+  std::cout << "sizeof(EmptyAsBase)    = " << sizeof(EmptyAsBase)
+            << " (Empty as a base is typically free)\n";
+  return 0;
 }
