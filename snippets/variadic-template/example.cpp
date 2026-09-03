@@ -6,12 +6,12 @@
 namespace with_base_case {
 
 // Termination (base) case: zero arguments left.
-inline void print() {}
+inline void Print() {}
 
 template <typename Head, typename... Tail>
-void print(const Head& head, const Tail&... tail) {
+void Print(const Head& head, const Tail&... tail) {
     std::cout << head << "\n";
-    print(tail...);
+    Print(tail...);
 }
 
 } // namespace with_base_case
@@ -21,7 +21,7 @@ namespace fold_expression {
 // No termination overload needed: the fold expression expands the whole
 // pack directly.
 template <typename... Args>
-void print(Args&&... args) {
+void Print(Args&&... args) {
     ((std::cout << args << "\n"), ...); // C++17 unary right fold
 }
 
@@ -29,10 +29,10 @@ void print(Args&&... args) {
 
 int main() {
     std::cout << "-- with_base_case::print --\n";
-    with_base_case::print(1, "two", 3.0);
+    with_base_case::Print(1, "two", 3.0);
 
     std::cout << "-- fold_expression::print --\n";
-    fold_expression::print(1, "two", 3.0);
+    fold_expression::Print(1, "two", 3.0);
 
     return 0;
 }

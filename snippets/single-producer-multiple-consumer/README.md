@@ -7,7 +7,7 @@ when `sequence == position + 1`. The single producer only ever does
 relaxed loads/a release store on its own position, so it never contends
 with consumers; multiple consumers race each other for a slot via one
 `compare_exchange_weak` on a shared cursor, and the loser simply retries
-at its (CAS-updated) new position. `try_enqueue_batch`/`try_dequeue_batch`
+at its (CAS-updated) new position. `TryEnqueueBatch`/`TryDequeueBatch`
 extend the same idea to whole ranges at once. `ManagedSPMCSystem` wraps
 the queue with a pool of consumer threads and a processor callback, for
 the common case of "just hand me items or batches as they arrive."

@@ -7,13 +7,13 @@ struct ItemC;
 
 struct Item {
     virtual ~Item() = default;
-    virtual struct ItemA* asItemA() { return nullptr; }
-    virtual ItemB* asItemB() { return nullptr; }
-    virtual ItemC* asItemC() { return nullptr; }
+    virtual struct ItemA* AsItemA() { return nullptr; }
+    virtual ItemB* AsItemB() { return nullptr; }
+    virtual ItemC* AsItemC() { return nullptr; }
 };
 
 struct ItemA : Item {
-    ItemA* asItemA() override { return this; }
+    ItemA* AsItemA() override { return this; }
 };
 
 struct SomeOtherItem : Item {
@@ -22,7 +22,7 @@ struct SomeOtherItem : Item {
 
 int main() {
     Item* item = new ItemA();
-    if (item->asItemA()) {
+    if (item->AsItemA()) {
         std::cout << "real ItemA\n";
     } else {
         std::cout << "not real ItemA\n";
@@ -30,7 +30,7 @@ int main() {
     delete item;
 
     Item* other = new SomeOtherItem();
-    std::cout << (other->asItemA() ? "real ItemA\n" : "not real ItemA\n");
+    std::cout << (other->AsItemA() ? "real ItemA\n" : "not real ItemA\n");
     delete other;
 
     return 0;

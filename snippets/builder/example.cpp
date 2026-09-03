@@ -9,34 +9,34 @@ public:
     class Builder;
 
     Foo(int prop1, bool prop2, bool prop3, std::vector<int> prop4)
-        : prop1(prop1), prop2(prop2), prop3(prop3), prop4(std::move(prop4)) {}
+        : prop1_(prop1), prop2_(prop2), prop3_(prop3), prop4_(std::move(prop4)) {}
 
-    int prop1;
-    bool prop2;
-    bool prop3;
-    std::vector<int> prop4;
+    int prop1_;
+    bool prop2_;
+    bool prop3_;
+    std::vector<int> prop4_;
 };
 
 class Foo::Builder {
 public:
-    Builder& set_prop1(int value) {
+    Builder& SetProp1(int value) {
         prop1_ = value;
         return *this;
     }
-    Builder& set_prop2(bool value) {
+    Builder& SetProp2(bool value) {
         prop2_ = value;
         return *this;
     }
-    Builder& set_prop3(bool value) {
+    Builder& SetProp3(bool value) {
         prop3_ = value;
         return *this;
     }
-    Builder& set_prop4(std::vector<int> value) {
+    Builder& SetProp4(std::vector<int> value) {
         prop4_ = std::move(value);
         return *this;
     }
 
-    Foo build() const { return Foo{prop1_, prop2_, prop3_, prop4_}; }
+    Foo Build() const { return Foo{prop1_, prop2_, prop3_, prop4_}; }
 
 private:
     int prop1_ = 0;
@@ -47,13 +47,13 @@ private:
 
 int main() {
     Foo f = Foo::Builder{}
-                 .set_prop1(5)
-                 .set_prop3(true)
-                 .set_prop4({1, 2, 3})
-                 .build();
+                 .SetProp1(5)
+                 .SetProp3(true)
+                 .SetProp4({1, 2, 3})
+                 .Build();
 
-    std::cout << "prop1=" << f.prop1 << " prop2=" << std::boolalpha << f.prop2
-              << " prop3=" << f.prop3 << " prop4.size()=" << f.prop4.size() << "\n";
+    std::cout << "prop1=" << f.prop1_ << " prop2=" << std::boolalpha << f.prop2_
+              << " prop3=" << f.prop3_ << " prop4.size()=" << f.prop4_.size() << "\n";
 
     return 0;
 }

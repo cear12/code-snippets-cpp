@@ -7,7 +7,7 @@
 #include <type_traits>
 
 template <typename F>
-auto async_demo(F&& func) {
+auto AsyncDemo(F&& func) {
     using ResultType = std::invoke_result_t<std::decay_t<F>>;
     std::promise<ResultType> promise;
     std::future<ResultType> future = promise.get_future();
@@ -32,7 +32,7 @@ auto async_demo(F&& func) {
 }
 
 int main() {
-    auto future = async_demo([] {
+    auto future = AsyncDemo([] {
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
         return 21 * 2;
     });

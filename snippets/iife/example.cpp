@@ -5,19 +5,19 @@
 #include <iostream>
 
 int main() {
-    constexpr int a = 12;
-    constexpr int b = 24;
+    constexpr int kA = 12;
+    constexpr int kB = 24;
 
     // Without an IIFE, computing this would need a non-const variable
     // (assigned across branches) or a separate named helper function used
     // exactly once.
-    const int result = [] {
-        if (a > b) {
-            return 36 * (a - b);
+    const int kResult = [] {
+        if (kA > kB) {
+            return 36 * (kA - kB);
         }
-        return (b > 345) ? (a + 3 + b * 35) : 77;
+        return (kB > 345) ? (kA + 3 + kB * 35) : 77;
     }();
 
-    std::cout << "result = " << result << "\n";
+    std::cout << "result = " << kResult << "\n";
     return 0;
 }

@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-void processFile(const std::string_view& filename) {
+void ProcessFile(const std::string_view& filename) {
     std::cout << "processing file: " << filename << "\n";
 }
 
@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
         if (std::strcmp(argv[i], "-t") == 0) test = true;
     }
     for (int i = 1; i < argc; ++i) {
-        if (argv[i][0] != '-') processFile(argv[i]);
+        if (argv[i][0] != '-') ProcessFile(argv[i]);
     }
     std::cout << "verbose=" << std::boolalpha << verbose << " test=" << test << "\n";
 

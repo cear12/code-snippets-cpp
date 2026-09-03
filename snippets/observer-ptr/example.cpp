@@ -4,31 +4,31 @@
 #include <iostream>
 
 template <typename T>
-class observer_ptr {
+class ObserverPtr {
 public:
-    constexpr observer_ptr() noexcept = default;
-    constexpr observer_ptr(T* p) noexcept : m_ptr(p) {}
+    constexpr ObserverPtr() noexcept = default;
+    constexpr ObserverPtr(T* p) noexcept : m_ptr_(p) {}
 
-    T* get() const noexcept { return m_ptr; }
+    T* Get() const noexcept { return m_ptr_; }
 
-    explicit operator bool() const noexcept { return m_ptr != nullptr; }
+    explicit operator bool() const noexcept { return m_ptr_ != nullptr; }
 
-    T& operator*() const noexcept { return *get(); }
-    T* operator->() const noexcept { return get(); }
+    T& operator*() const noexcept { return *Get(); }
+    T* operator->() const noexcept { return Get(); }
 
 private:
-    T* m_ptr = nullptr;
+    T* m_ptr_ = nullptr;
 };
 
 struct Widget {
-    int id;
+    int id_;
 };
 
-void inspect(observer_ptr<Widget> w) {
+void Inspect(ObserverPtr<Widget> w) {
     // The parameter type alone documents that inspect() does not take
     // ownership of w -- unlike, say, a unique_ptr<Widget> parameter would.
     if (w) {
-        std::cout << "Widget id=" << w->id << "\n";
+        std::cout << "Widget id=" << w->id_ << "\n";
     } else {
         std::cout << "no widget\n";
     }
@@ -36,10 +36,10 @@ void inspect(observer_ptr<Widget> w) {
 
 int main() {
     Widget widget{99};
-    observer_ptr<Widget> obs(&widget); // widget's storage is still owned by main()'s stack frame
+    ObserverPtr<Widget> obs(&widget); // widget's storage is still owned by main()'s stack frame
 
-    inspect(obs);
-    inspect(nullptr);
+    Inspect(obs);
+    Inspect(nullptr);
 
     return 0;
 }

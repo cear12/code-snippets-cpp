@@ -18,19 +18,19 @@ template <typename T, size_t Capacity>
 class SPMCQueue {
 private:
     static_assert((Capacity & (Capacity - 1)) == 0, "Capacity must be power of 2");
-    static constexpr size_t MASK = Capacity - 1;
-    static constexpr size_t CACHE_LINE_SIZE = 64;
+    static constexpr size_t kMask = Capacity - 1;
+    static constexpr size_t kCacheLineSize = 64;
 
-    struct alignas(CACHE_LINE_SIZE) Slot {
-        std::atomic<size_t> sequence{0};
-        T data;
+    struct alignas(kCacheLineSize) Slot {
+        std::atomic<size_t> sequence_{0};
+        T data_;
     };
 
-    alignas(CACHE_LINE_SIZE) std::atomic<size_t> producer_pos_{0};
-    alignas(CACHE_LINE_SIZE) std::atomic<size_t> consumer_cursor_{0};
-    alignas(CACHE_LINE_SIZE) std::array<Slot, Capacity> buffer_;
+    alignas(kCacheLineSize) std::atomic<size_t> producer_pos_{0};
+    alignas(kCacheLineSize) std::atomic<size_t> consumer_cursor_{0};
+    alignas(kCacheLineSize) std::array<Slot, Capacity> buffer_;
 
-    alignas(CACHE_LINE_SIZE) mutable std::atomic<size_t> total_enqueued_{0};
+    alignas(kCacheLineSize) mutable std::atomic<size_t> total_enqueued_{0};
     mutable std::atomic<size_t> total_dequeued_{0};
     mutable std::atomic<size_t> batch_operations_{0};
     mutable std::atomic<size_t> failed_dequeues_{0};
@@ -38,20 +38,20 @@ private:
 public:
     SPMCQueue() {
         for (size_t i = 0; i < Capacity; ++i) {
-            buffer_[i].sequence.store(i, std::memory_order_relaxed);
+            buffer_[i].sequence_.store(i, std::memory_order_relaxed);
         }
     }
 
     // Single producer, non-blocking.
     template <typename U>
-    bool try_enqueue(U&& item) {
+    bool TryEnqueue(U&& item) {
         size_t pos = producer_pos_.load(std::memory_order_relaxed);
-        Slot& slot = buffer_[pos & MASK];
-        size_t seq = slot.sequence.load(std::memory_order_acquire);
+        Slot& slot = buffer_[pos & kMask];
+        size_t seq = slot.sequence_.load(std::memory_order_acquire);
 
         if (seq == pos) {
-            slot.data = std::forward<U>(item);
-            slot.sequence.store(pos + 1, std::memory_order_release);
+            slot.data_ = std::forward<U>(item);
+            slot.sequence_.store(pos + 1, std::memory_order_release);
             producer_pos_.store(pos + 1, std::memory_order_relaxed);
 
             total_enqueued_.fetch_add(1, std::memory_order_relaxed);
@@ -63,15 +63,15 @@ public:
 
     // Single producer, blocking (spin-wait).
     template <typename U>
-    void enqueue(U&& item) {
-        while (!try_enqueue(std::forward<U>(item))) {
+    void Enqueue(U&& item) {
+        while (!TryEnqueue(std::forward<U>(item))) {
             std::this_thread::yield();
         }
     }
 
     // Single producer, batch.
     template <typename Iterator>
-    size_t try_enqueue_batch(Iterator begin, Iterator end) {
+    size_t TryEnqueueBatch(Iterator begin, Iterator end) {
         size_t count = static_cast<size_t>(std::distance(begin, end));
         if (count == 0) return 0;
 
@@ -79,15 +79,15 @@ public:
         size_t enqueued = 0;
 
         for (auto it = begin; it != end && enqueued < count; ++it, ++enqueued) {
-            Slot& slot = buffer_[(pos + enqueued) & MASK];
-            size_t seq = slot.sequence.load(std::memory_order_acquire);
+            Slot& slot = buffer_[(pos + enqueued) & kMask];
+            size_t seq = slot.sequence_.load(std::memory_order_acquire);
 
             if (seq != pos + enqueued) {
                 break; // Queue is full.
             }
 
-            slot.data = *it;
-            slot.sequence.store(pos + enqueued + 1, std::memory_order_release);
+            slot.data_ = *it;
+            slot.sequence_.store(pos + enqueued + 1, std::memory_order_release);
         }
 
         if (enqueued > 0) {
@@ -100,16 +100,16 @@ public:
     }
 
     // Multiple consumers, non-blocking.
-    bool try_dequeue(T& item) {
+    bool TryDequeue(T& item) {
         while (true) {
             size_t pos = consumer_cursor_.load(std::memory_order_relaxed);
-            Slot& slot = buffer_[pos & MASK];
-            size_t seq = slot.sequence.load(std::memory_order_acquire);
+            Slot& slot = buffer_[pos & kMask];
+            size_t seq = slot.sequence_.load(std::memory_order_acquire);
 
             if (seq == pos + 1) {
                 if (consumer_cursor_.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed)) {
-                    item = std::move(slot.data);
-                    slot.sequence.store(pos + Capacity, std::memory_order_release);
+                    item = std::move(slot.data_);
+                    slot.sequence_.store(pos + Capacity, std::memory_order_release);
 
                     total_dequeued_.fetch_add(1, std::memory_order_relaxed);
                     return true;
@@ -125,9 +125,9 @@ public:
     }
 
     // Multiple consumers, blocking.
-    T dequeue() {
+    T Dequeue() {
         T item;
-        while (!try_dequeue(item)) {
+        while (!TryDequeue(item)) {
             std::this_thread::sleep_for(std::chrono::microseconds(1));
         }
         return item;
@@ -135,20 +135,20 @@ public:
 
     // Multiple consumers, batch.
     template <typename OutputIterator>
-    size_t try_dequeue_batch(OutputIterator out, size_t max_count) {
+    size_t TryDequeueBatch(OutputIterator out, size_t max_count) {
         if (max_count == 0) return 0;
 
         size_t dequeued = 0;
 
         while (dequeued < max_count) {
             size_t pos = consumer_cursor_.load(std::memory_order_relaxed);
-            Slot& slot = buffer_[pos & MASK];
-            size_t seq = slot.sequence.load(std::memory_order_acquire);
+            Slot& slot = buffer_[pos & kMask];
+            size_t seq = slot.sequence_.load(std::memory_order_acquire);
 
             if (seq == pos + 1) {
                 if (consumer_cursor_.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed)) {
-                    *out++ = std::move(slot.data);
-                    slot.sequence.store(pos + Capacity, std::memory_order_release);
+                    *out++ = std::move(slot.data_);
+                    slot.sequence_.store(pos + Capacity, std::memory_order_release);
                     ++dequeued;
                 }
             } else {
@@ -166,34 +166,34 @@ public:
         return dequeued;
     }
 
-    bool empty() const {
+    bool Empty() const {
         return producer_pos_.load(std::memory_order_relaxed) == consumer_cursor_.load(std::memory_order_relaxed);
     }
 
-    bool full() const {
+    bool Full() const {
         return (producer_pos_.load(std::memory_order_relaxed) - consumer_cursor_.load(std::memory_order_relaxed)) >=
                Capacity;
     }
 
-    size_t size() const {
+    size_t Size() const {
         return producer_pos_.load(std::memory_order_relaxed) - consumer_cursor_.load(std::memory_order_relaxed);
     }
 
-    size_t capacity() const { return Capacity; }
+    size_t GetCapacity() const { return Capacity; }
 
     struct Statistics {
-        size_t total_enqueued;
-        size_t total_dequeued;
-        size_t batch_operations;
-        size_t failed_dequeues;
-        size_t current_size;
-        double utilization_ratio;
+        size_t total_enqueued_;
+        size_t total_dequeued_;
+        size_t batch_operations_;
+        size_t failed_dequeues_;
+        size_t current_size_;
+        double utilization_ratio_;
     };
 
-    Statistics get_statistics() const {
+    Statistics GetStatistics() const {
         size_t enqueued = total_enqueued_.load(std::memory_order_relaxed);
         size_t dequeued = total_dequeued_.load(std::memory_order_relaxed);
-        size_t current_size = size();
+        size_t current_size = Size();
 
         return {enqueued,
                 dequeued,
@@ -203,7 +203,7 @@ public:
                 static_cast<double>(current_size) / static_cast<double>(Capacity)};
     }
 
-    void reset_statistics() {
+    void ResetStatistics() {
         total_enqueued_.store(0, std::memory_order_relaxed);
         total_dequeued_.store(0, std::memory_order_relaxed);
         batch_operations_.store(0, std::memory_order_relaxed);
@@ -223,13 +223,13 @@ private:
     std::function<void(T)> item_processor_;
     std::function<void(std::vector<T>)> batch_processor_;
 
-    void consumer_loop(size_t /* consumer_id */, bool use_batching) {
+    void ConsumerLoop(size_t /* consumer_id */, bool use_batching) {
         if (use_batching && batch_processor_) {
             std::vector<T> batch;
             batch.reserve(64);
 
             while (running_.load(std::memory_order_relaxed)) {
-                size_t dequeued = queue_.try_dequeue_batch(std::back_inserter(batch), 64);
+                size_t dequeued = queue_.TryDequeueBatch(std::back_inserter(batch), 64);
 
                 if (dequeued > 0) {
                     batch_processor_(std::move(batch));
@@ -241,7 +241,7 @@ private:
             }
 
             T item;
-            while (queue_.try_dequeue(item)) {
+            while (queue_.TryDequeue(item)) {
                 batch.push_back(std::move(item));
             }
             if (!batch.empty()) {
@@ -251,14 +251,14 @@ private:
         } else if (item_processor_) {
             T item;
             while (running_.load(std::memory_order_relaxed)) {
-                if (queue_.try_dequeue(item)) {
+                if (queue_.TryDequeue(item)) {
                     item_processor_(std::move(item));
                 } else {
                     std::this_thread::sleep_for(std::chrono::microseconds(100));
                 }
             }
 
-            while (queue_.try_dequeue(item)) {
+            while (queue_.TryDequeue(item)) {
                 item_processor_(std::move(item));
             }
         }
@@ -269,36 +269,36 @@ public:
     explicit ManagedSPMCSystem(ItemProcessor&& processor,
                                 size_t num_consumers = std::thread::hardware_concurrency())
         : item_processor_(std::forward<ItemProcessor>(processor)) {
-        start_consumers(num_consumers, false);
+        StartConsumers(num_consumers, false);
     }
 
     template <typename BatchProcessor>
     ManagedSPMCSystem(BatchProcessor&& batch_processor, size_t num_consumers, bool /* batch_tag */)
         : batch_processor_(std::forward<BatchProcessor>(batch_processor)) {
-        start_consumers(num_consumers, true);
+        StartConsumers(num_consumers, true);
     }
 
-    ~ManagedSPMCSystem() { stop(); }
+    ~ManagedSPMCSystem() { Stop(); }
 
     ManagedSPMCSystem(const ManagedSPMCSystem&) = delete;
     ManagedSPMCSystem& operator=(const ManagedSPMCSystem&) = delete;
 
     template <typename U>
-    bool try_produce(U&& item) {
-        return queue_.try_enqueue(std::forward<U>(item));
+    bool TryProduce(U&& item) {
+        return queue_.TryEnqueue(std::forward<U>(item));
     }
 
     template <typename U>
-    void produce(U&& item) {
-        queue_.enqueue(std::forward<U>(item));
+    void Produce(U&& item) {
+        queue_.Enqueue(std::forward<U>(item));
     }
 
     template <typename Iterator>
-    size_t try_produce_batch(Iterator begin, Iterator end) {
-        return queue_.try_enqueue_batch(begin, end);
+    size_t TryProduceBatch(Iterator begin, Iterator end) {
+        return queue_.TryEnqueueBatch(begin, end);
     }
 
-    void stop() {
+    void Stop() {
         running_.store(false, std::memory_order_relaxed);
         for (auto& consumer : consumers_) {
             if (consumer.joinable()) consumer.join();
@@ -306,13 +306,13 @@ public:
         consumers_.clear();
     }
 
-    auto get_statistics() const { return queue_.get_statistics(); }
+    auto GetStatistics() const { return queue_.GetStatistics(); }
 
 private:
-    void start_consumers(size_t num_consumers, bool use_batching) {
+    void StartConsumers(size_t num_consumers, bool use_batching) {
         consumers_.reserve(num_consumers);
         for (size_t i = 0; i < num_consumers; ++i) {
-            consumers_.emplace_back([this, i, use_batching] { consumer_loop(i, use_batching); });
+            consumers_.emplace_back([this, i, use_batching] { ConsumerLoop(i, use_batching); });
         }
     }
 };
@@ -326,7 +326,7 @@ int main() {
         constexpr int kConsumers = 4;
 
         std::thread producer([&queue] {
-            for (int i = 0; i < kItems; ++i) queue.enqueue(i);
+            for (int i = 0; i < kItems; ++i) queue.Enqueue(i);
         });
 
         std::atomic<int> consumed{0};
@@ -336,7 +336,7 @@ int main() {
                 int item;
                 int local_empty_polls = 0;
                 while (consumed.load() < kItems && local_empty_polls < 1000) {
-                    if (queue.try_dequeue(item)) {
+                    if (queue.TryDequeue(item)) {
                         consumed.fetch_add(1, std::memory_order_relaxed);
                         local_empty_polls = 0;
                     } else {
@@ -363,13 +363,13 @@ int main() {
 
         constexpr int kItems = 5000;
         for (int i = 0; i < kItems; ++i) {
-            system.produce(i);
+            system.Produce(i);
         }
 
         while (processed.load() < kItems) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-        system.stop();
+        system.Stop();
 
         std::cout << "[ManagedSPMCSystem] processed " << processed.load() << "/" << kItems << ": "
                   << (processed.load() == kItems ? "PASS" : "FAIL") << "\n";

@@ -6,21 +6,21 @@
 #include <memory>
 
 struct IProduct {
-    virtual void foo() = 0;
+    virtual void Foo() = 0;
     virtual ~IProduct() = default;
 };
 
 struct ConcreteProduct : IProduct {
-    void foo() override {
+    void Foo() override {
         std::cout << "ConcreteProduct created and used\n";
     }
 };
 
 using Factory = std::function<std::unique_ptr<IProduct>()>;
 
-void Client(const Factory& makeProduct) {
-    auto product = makeProduct();
-    product->foo();
+void Client(const Factory& make_product) {
+    auto product = make_product();
+    product->Foo();
 }
 
 int main() {

@@ -7,7 +7,7 @@
 #include <string>
 #include <unordered_map>
 
-std::function<std::string()> makeKeyClosure(const std::string& base) {
+std::function<std::string()> MakeKeyClosure(const std::string& base) {
     auto key = std::make_shared<std::string>(std::to_string(std::hash<std::string>{}(base)));
     return [key]() { return *key; };
 }
@@ -15,19 +15,19 @@ std::function<std::string()> makeKeyClosure(const std::string& base) {
 int main() {
     std::unordered_map<std::string, std::string> cache;
 
-    auto keyClosure = makeKeyClosure("example string");
-    std::string cacheKey = keyClosure();
-    cache[cacheKey] = "Cached value for example string";
+    auto key_closure = MakeKeyClosure("example string");
+    std::string cache_key = key_closure();
+    cache[cache_key] = "Cached value for example string";
 
-    std::cout << "Generated key: " << cacheKey << "\n";
-    std::cout << "Value from cache: " << cache[cacheKey] << "\n";
+    std::cout << "Generated key: " << cache_key << "\n";
+    std::cout << "Value from cache: " << cache[cache_key] << "\n";
 
-    auto otherClosure = makeKeyClosure("another string");
-    std::string otherKey = otherClosure();
-    cache[otherKey] = "Cached value for another string";
+    auto other_closure = MakeKeyClosure("another string");
+    std::string other_key = other_closure();
+    cache[other_key] = "Cached value for another string";
 
-    std::cout << "Other key: " << otherKey << "\n";
-    std::cout << "Other value: " << cache[otherKey] << "\n";
+    std::cout << "Other key: " << other_key << "\n";
+    std::cout << "Other value: " << cache[other_key] << "\n";
 
     return 0;
 }

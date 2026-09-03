@@ -8,7 +8,7 @@ class SimpleContainer {
 public:
     SimpleContainer() = default;
 
-    void addItem(const T& item) {
+    void AddItem(const T& item) {
         if (size_ < kMaxSize) {
             data_[size_++] = item;
         } else {
@@ -43,9 +43,9 @@ private:
 
 int main() {
     SimpleContainer<int> container;
-    container.addItem(1);
-    container.addItem(2);
-    container.addItem(3);
+    container.AddItem(1);
+    container.AddItem(2);
+    container.AddItem(3);
 
     for (int value : container) { // works because of operator*/++/!= alone
         std::cout << value << " ";

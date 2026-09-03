@@ -6,7 +6,7 @@
 #include <iostream>
 #include <string>
 
-std::string maybeBreaksNrvo() {
+std::string MaybeBreaksNrvo() {
     if (false) {
         return std::string("never get here"); // an earlier, different return value
     }
@@ -17,6 +17,6 @@ std::string maybeBreaksNrvo() {
 }
 
 int main() {
-    std::cout << maybeBreaksNrvo() << "\n";
+    std::cout << MaybeBreaksNrvo() << "\n";
     return 0;
 }

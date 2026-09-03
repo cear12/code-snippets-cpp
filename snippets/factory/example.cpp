@@ -18,7 +18,7 @@ namespace core {
 class ICryptoProvider {
 public:
     virtual ~ICryptoProvider() = default;
-    virtual void doWork() = 0;
+    virtual void DoWork() = 0;
 };
 
 class CryptoProviderFactory {
@@ -32,7 +32,7 @@ public:
 
     void registerType(const std::string& id, Creator creator) { creators_[id] = std::move(creator); }
 
-    std::unique_ptr<ICryptoProvider> create(const std::string& id) const {
+    std::unique_ptr<ICryptoProvider> Create(const std::string& id) const {
         auto it = creators_.find(id);
         if (it == creators_.end()) {
             throw std::runtime_error("Unknown crypto provider id: " + id);
@@ -76,7 +76,7 @@ namespace wincrypt {
 
 class WincryptProvider : public core::ICryptoProvider {
 public:
-    void doWork() override { std::cout << "WincryptProvider: signing via Windows CryptoAPI\n"; }
+    void DoWork() override { std::cout << "WincryptProvider: signing via Windows CryptoAPI\n"; }
 };
 
 } // namespace wincrypt
@@ -90,7 +90,7 @@ namespace cryptoki {
 
 class CryptokiProvider : public core::ICryptoProvider {
 public:
-    void doWork() override { std::cout << "CryptokiProvider: signing via a PKCS#11 token\n"; }
+    void DoWork() override { std::cout << "CryptokiProvider: signing via a PKCS#11 token\n"; }
 };
 
 } // namespace cryptoki
@@ -103,8 +103,8 @@ REGISTER_CLASS(cryptoki::CryptokiProvider, core::ICryptoProvider, "CryptokiProvi
 int main() {
     for (const auto& id : {"WincryptProvider", "CryptokiProvider"}) {
         try {
-            auto provider = core::CryptoProviderFactory::instance().create(id);
-            provider->doWork();
+            auto provider = core::CryptoProviderFactory::instance().Create(id);
+            provider->DoWork();
         } catch (const std::exception& e) {
             std::cerr << "Error creating '" << id << "': " << e.what() << "\n";
         }
@@ -112,7 +112,7 @@ int main() {
 
     // Unknown id: exercises the error path.
     try {
-        core::CryptoProviderFactory::instance().create("NonexistentProvider");
+        core::CryptoProviderFactory::instance().Create("NonexistentProvider");
     } catch (const std::exception& e) {
         std::cout << "Expected failure: " << e.what() << "\n";
     }

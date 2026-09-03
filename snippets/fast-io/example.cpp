@@ -3,7 +3,7 @@
 // amounts of console I/O (common in competitive programming).
 #include <iostream>
 
-static const auto fastIO = []() {
+static const auto kFastIo = []() {
     std::ios_base::sync_with_stdio(false); // ios_base: applies process-wide
     std::cin.tie(nullptr);                 // ios: applies to this stream only
     return 0;

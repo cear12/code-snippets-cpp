@@ -10,49 +10,49 @@
 
 template <typename T>
 struct UniversalPtr {
-    std::shared_ptr<T> ptr;
+    std::shared_ptr<T> ptr_;
 
     constexpr UniversalPtr() noexcept = default;
     constexpr UniversalPtr(std::nullptr_t) noexcept {}
 
     // From a reference: copies U into a new, owned object.
     template <typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-    UniversalPtr(const U& r) : ptr(std::make_shared<U>(r)) {}
+    UniversalPtr(const U& r) : ptr_(std::make_shared<U>(r)) {}
 
     // From a raw pointer: adopts it -- ptr will delete it later.
     template <typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-    UniversalPtr(U* rawPtr) : ptr(rawPtr) {}
+    UniversalPtr(U* raw_ptr) : ptr_(raw_ptr) {}
 
     // From a unique_ptr: ownership transfers to ptr.
     template <typename U, typename D, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-    UniversalPtr(std::unique_ptr<U, D>&& uptr) : ptr(std::move(uptr)) {}
+    UniversalPtr(std::unique_ptr<U, D>&& uptr) : ptr_(std::move(uptr)) {}
 
-    T* get() const noexcept { return ptr.get(); }
-    T& operator*() const { return *ptr; }
-    T* operator->() const { return ptr.get(); }
+    T* Get() const noexcept { return ptr_.get(); }
+    T& operator*() const { return *ptr_; }
+    T* operator->() const { return ptr_.get(); }
 };
 
 struct Base {
-    virtual void foo() const { std::cout << "Base::foo\n"; }
+    virtual void Foo() const { std::cout << "Base::foo\n"; }
     virtual ~Base() = default;
 };
 
 struct Derived : Base {
-    void foo() const override { std::cout << "Derived::foo\n"; }
+    void Foo() const override { std::cout << "Derived::foo\n"; }
 };
 
 int main() {
     Derived d;
-    UniversalPtr<Base> pFromRef(d);               // copies d into a new, owned Derived
-    UniversalPtr<Base> pFromRaw(new Derived());     // adopts and will delete this object
-    UniversalPtr<Base> pNull(nullptr);              // owns nothing
+    UniversalPtr<Base> p_from_ref(d);               // copies d into a new, owned Derived
+    UniversalPtr<Base> p_from_raw(new Derived());     // adopts and will delete this object
+    UniversalPtr<Base> p_null(nullptr);              // owns nothing
     auto uptr = std::make_unique<Derived>();
-    UniversalPtr<Base> pFromUnique(std::move(uptr)); // ownership transferred in
+    UniversalPtr<Base> p_from_unique(std::move(uptr)); // ownership transferred in
 
-    pFromRef->foo();
-    pFromRaw->foo();
-    std::cout << "pNull.get() == nullptr: " << std::boolalpha << (pNull.get() == nullptr) << "\n";
-    pFromUnique->foo();
+    p_from_ref->Foo();
+    p_from_raw->Foo();
+    std::cout << "pNull.get() == nullptr: " << std::boolalpha << (p_null.Get() == nullptr) << "\n";
+    p_from_unique->Foo();
 
     return 0;
 }

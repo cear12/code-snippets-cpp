@@ -7,11 +7,11 @@
 
 struct Logger {
     virtual ~Logger() = default;
-    virtual void log(const char* msg) = 0;
+    virtual void Log(const char* msg) = 0;
 };
 
 struct NullLogger : Logger {
-    void log(const char*) override { /* does nothing, on purpose */ }
+    void Log(const char*) override { /* does nothing, on purpose */ }
 };
 
 Logger& GetNullLogger() noexcept {
@@ -19,7 +19,7 @@ Logger& GetNullLogger() noexcept {
     return null_logger;
 }
 
-std::shared_ptr<Logger> makeNullLogger() {
+std::shared_ptr<Logger> MakeNullLogger() {
     // shared_ptr<void>{} is empty (no control block, no ownership); the
     // aliasing constructor makes the result share that "owns nothing"
     // state while pointing at the real (static) NullLogger instance.
@@ -27,8 +27,8 @@ std::shared_ptr<Logger> makeNullLogger() {
 }
 
 int main() {
-    std::shared_ptr<Logger> logger = makeNullLogger();
-    logger->log("this goes nowhere");
+    std::shared_ptr<Logger> logger = MakeNullLogger();
+    logger->Log("this goes nowhere");
     std::cout << "logger.use_count() = " << logger.use_count() << " (0: owns nothing)\n";
     return 0; // destroying `logger` here does NOT delete GetNullLogger()'s static object
 }

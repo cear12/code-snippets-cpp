@@ -7,22 +7,22 @@ namespace interface_ns {
 
 class Foo {
 public:
-    void member() const {
+    void Member() const {
         std::cout << "Foo::member() (an ordinary member function)\n";
     }
 };
 
 // Not a member, but still part of Foo's interface: it only uses Foo's
 // public API, and lives in the same namespace so ADL finds it.
-void non_member(const Foo& obj) {
+void NonMember(const Foo& obj) {
     std::cout << "non_member(Foo) -- found via ADL, not a member function\n";
-    obj.member();
+    obj.Member();
 }
 
 } // namespace interface_ns
 
 int main() {
     interface_ns::Foo obj;
-    non_member(obj); // no "interface_ns::" needed: ADL finds it from obj's type
+    NonMember(obj); // no "interface_ns::" needed: ADL finds it from obj's type
     return 0;
 }

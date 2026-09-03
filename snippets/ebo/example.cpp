@@ -6,12 +6,12 @@
 struct Empty {};
 
 struct EmptyAsMember {
-    Empty e;
-    int i;
+    Empty e_;
+    int i_;
 };
 
 struct EmptyAsBase : Empty {
-    int i;
+    int i_;
 };
 
 int main() {

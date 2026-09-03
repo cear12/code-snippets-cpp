@@ -26,7 +26,7 @@ private:
     std::future<T> result_;
 };
 
-void callerFunc() {
+void CallerFunc() {
     std::cout << "start caller func\n";
 
     std::function<void()> f = [] {
@@ -36,11 +36,11 @@ void callerFunc() {
         }
     };
 
-    AsyncWrapper<void> asyncWrapper(std::move(f));
+    AsyncWrapper<void> async_wrapper(std::move(f));
     std::cout << "finish caller func (destructor above still has to run)\n";
 }
 
 int main() {
-    callerFunc();
+    CallerFunc();
     return 0;
 }

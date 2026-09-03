@@ -11,6 +11,6 @@ type-safety holes that plain `0`/`NULL` left open.
 original name for its global instance can no longer be used, even though
 this technique predates the keyword. This file follows the language
 version its build actually targets (C++17) and names the instance
-`my_nullptr` instead -- see the fuller writeup and historical reference
+`kMyNullptr` instead -- see the fuller writeup and historical reference
 (N2431) under `idioms-cpp/idioms/nullptr-emulation`, which covers the
 same idiom.

@@ -54,7 +54,7 @@ public:
     SmartPtr(const SmartPtr&) = delete;
     SmartPtr& operator=(const SmartPtr&) = delete;
 
-    T* get() const { return p_; }
+    T* Get() const { return p_; }
     T& operator*() const { return *p_; }
     T* operator->() const { return p_; }
 
@@ -72,7 +72,7 @@ int main() {
     std::cout << "\n-- array, without debug logging --\n";
     {
         SmartPtr<int, DeleteArray> arr(new int[5]{1, 2, 3, 4, 5});
-        std::cout << "arr.get()[2] = " << arr.get()[2] << "\n";
+        std::cout << "arr.get()[2] = " << arr.Get()[2] << "\n";
     }
 
     return 0;

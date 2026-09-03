@@ -6,16 +6,16 @@
 namespace demo {
 
 template <typename T>
-class unique_ptr {
+class UniquePtr {
 public:
-    explicit unique_ptr(T* ptr = nullptr) : ptr_(ptr) {}
-    ~unique_ptr() { delete ptr_; }
+    explicit UniquePtr(T* ptr = nullptr) : ptr_(ptr) {}
+    ~UniquePtr() { delete ptr_; }
 
-    unique_ptr(unique_ptr&& other) noexcept : ptr_(other.ptr_) {
+    UniquePtr(UniquePtr&& other) noexcept : ptr_(other.ptr_) {
         other.ptr_ = nullptr;
     }
 
-    unique_ptr& operator=(unique_ptr&& other) noexcept {
+    UniquePtr& operator=(UniquePtr&& other) noexcept {
         if (this != &other) {
             delete ptr_;
             ptr_ = other.ptr_;
@@ -24,12 +24,12 @@ public:
         return *this;
     }
 
-    unique_ptr(const unique_ptr&) = delete;
-    unique_ptr& operator=(const unique_ptr&) = delete;
+    UniquePtr(const UniquePtr&) = delete;
+    UniquePtr& operator=(const UniquePtr&) = delete;
 
     T& operator*() const { return *ptr_; }
     T* operator->() const { return ptr_; }
-    T* get() const { return ptr_; }
+    T* Get() const { return ptr_; }
 
 private:
     T* ptr_;
@@ -38,18 +38,18 @@ private:
 } // namespace demo
 
 struct Widget {
-    int id;
-    explicit Widget(int i) : id(i) { std::cout << "Widget(" << id << ") constructed\n"; }
-    ~Widget() { std::cout << "Widget(" << id << ") destroyed\n"; }
+    int id_;
+    explicit Widget(int i) : id_(i) { std::cout << "Widget(" << id_ << ") constructed\n"; }
+    ~Widget() { std::cout << "Widget(" << id_ << ") destroyed\n"; }
 };
 
 int main() {
-    demo::unique_ptr<Widget> a(new Widget(1));
-    std::cout << "a->id = " << a->id << "\n";
+    demo::UniquePtr<Widget> a(new Widget(1));
+    std::cout << "a->id = " << a->id_ << "\n";
 
-    demo::unique_ptr<Widget> b(std::move(a)); // ownership transferred to b
-    std::cout << "a.get() == nullptr: " << std::boolalpha << (a.get() == nullptr) << "\n";
-    std::cout << "b->id = " << b->id << "\n";
+    demo::UniquePtr<Widget> b(std::move(a)); // ownership transferred to b
+    std::cout << "a.get() == nullptr: " << std::boolalpha << (a.Get() == nullptr) << "\n";
+    std::cout << "b->id = " << b->id_ << "\n";
 
     return 0; // Widget(1) destroyed exactly once, via b's destructor
 }

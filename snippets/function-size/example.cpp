@@ -6,22 +6,22 @@
 
 namespace function_size_hack {
 
-int test_proc() {
+int TestProc() {
     return 1;
 }
 
-void size_marker_proc() {}
+void SizeMarkerProc() {}
 
-std::size_t estimated_test_proc_size() {
+std::size_t EstimatedTestProcSize() {
     return static_cast<std::size_t>(
-        reinterpret_cast<std::uintptr_t>(reinterpret_cast<void*>(size_marker_proc)) -
-        reinterpret_cast<std::uintptr_t>(reinterpret_cast<void*>(test_proc)));
+        reinterpret_cast<std::uintptr_t>(reinterpret_cast<void*>(SizeMarkerProc)) -
+        reinterpret_cast<std::uintptr_t>(reinterpret_cast<void*>(TestProc)));
 }
 
 } // namespace function_size_hack
 
 int main() {
     std::cout << "estimated function size (bytes, unreliable): "
-              << function_size_hack::estimated_test_proc_size() << "\n";
+              << function_size_hack::EstimatedTestProcSize() << "\n";
     return 0;
 }

@@ -4,38 +4,38 @@
 #include <iostream>
 
 struct IFoo { // an ordinary, nameable interface
-    virtual int getValue() = 0;
+    virtual int GetValue() = 0;
     virtual ~IFoo() = default;
 };
 
 int main() {
     // A local type with no interface, returned via a lambda's auto
     // return type.
-    auto createVoldemortType = [] {
+    auto create_voldemort_type = [] {
         struct Voldemort { // locally defined, unnameable outside this lambda
-            int getValue() { return 21; }
+            int GetValue() { return 21; }
         };
         return Voldemort{};
     };
 
-    auto unnameable = createVoldemortType();       // must use auto -- Voldemort has no spellable name
+    auto unnameable = create_voldemort_type();       // must use auto -- Voldemort has no spellable name
     decltype(unnameable) unnameable2;               // but decltype can still name *this* type
 
     std::cout << "unnameable.getValue() + unnameable2.getValue() = "
-              << (unnameable.getValue() + unnameable2.getValue()) << "\n"; // 21 + 21 = 42
+              << (unnameable.GetValue() + unnameable2.GetValue()) << "\n"; // 21 + 21 = 42
 
     // A local type CAN derive from a normal, nameable interface, so
     // callers that only need IFoo's API don't need the concrete type's
     // name at all.
-    auto fooFactory = [] {
+    auto foo_factory = [] {
         struct VoldeFoo : IFoo {
-            int getValue() override { return 42; }
+            int GetValue() override { return 42; }
         };
         return VoldeFoo{};
     };
 
-    auto foo = fooFactory();
-    std::cout << "foo.getValue() = " << foo.getValue() << "\n";
+    auto foo = foo_factory();
+    std::cout << "foo.getValue() = " << foo.GetValue() << "\n";
 
     return 0;
 }

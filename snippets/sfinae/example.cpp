@@ -11,25 +11,25 @@
 // ============================================================
 namespace enable_if_style {
 
-template <bool Condition, typename Type = void>
+template <bool Condition, typename T = void>
 struct EnableIf {};
 
-template <typename Type>
-struct EnableIf<true, Type> {
-    using type = Type;
+template <typename T>
+struct EnableIf<true, T> {
+    using Type = T;
 };
 
 template <typename T, typename U>
 struct IsSame {
-    static constexpr bool value = false;
+    static constexpr bool kValue = false;
 };
 template <typename T>
 struct IsSame<T, T> {
-    static constexpr bool value = true;
+    static constexpr bool kValue = true;
 };
 
 template <typename T>
-typename EnableIf<!IsSame<T, int>::value, void>::type printContainer(const T& container) {
+typename EnableIf<!IsSame<T, int>::kValue, void>::Type PrintContainer(const T& container) {
     std::cout << "Values: { ";
     for (const auto& value : container) std::cout << value << " ";
     std::cout << "}\n";
@@ -46,7 +46,7 @@ using std::begin;
 using std::end;
 
 template <typename T>
-auto printContainer(const T& container)
+auto PrintContainer(const T& container)
     -> decltype(begin(container), end(container), void()) {
     std::cout << "Values: { ";
     for (const auto& value : container) std::cout << value << " ";
@@ -61,7 +61,7 @@ auto printContainer(const T& container)
 namespace if_constexpr_style {
 
 template <typename T>
-void printContainer(const T& value) {
+void PrintContainer(const T& value) {
     if constexpr (std::is_scalar_v<T>) {
         std::cout << "Scalar: " << value << "\n";
     } else {
@@ -76,11 +76,11 @@ void printContainer(const T& value) {
 int main() {
     std::vector<int> v{1, 2, 3};
 
-    enable_if_style::printContainer(v);
-    expression_validity_style::printContainer(v);
+    enable_if_style::PrintContainer(v);
+    expression_validity_style::PrintContainer(v);
 
-    if_constexpr_style::printContainer(v);
-    if_constexpr_style::printContainer(42); // the scalar branch, same function template
+    if_constexpr_style::PrintContainer(v);
+    if_constexpr_style::PrintContainer(42); // the scalar branch, same function template
 
     return 0;
 }

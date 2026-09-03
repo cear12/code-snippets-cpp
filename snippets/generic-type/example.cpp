@@ -3,30 +3,30 @@
 // by overload resolution at compile time rather than by a runtime branch.
 #include <iostream>
 
-enum Type { TypeA, TypeB };
+enum Type { kTypeA, kTypeB };
 
 template <int>
 struct GenericType final {};
 
-static GenericType<TypeA> genericTypeA;
-static GenericType<TypeB> genericTypeB;
+static GenericType<kTypeA> g_generic_type_a;
+static GenericType<kTypeB> g_generic_type_b;
 
-void print(GenericType<TypeA>) {
+void Print(GenericType<kTypeA>) {
     std::cout << "TypeA\n";
 }
 
-void print(GenericType<TypeB>) {
+void Print(GenericType<kTypeB>) {
     std::cout << "TypeB\n";
 }
 
 int main() {
     // style a: construct a temporary of the tag type
-    print(GenericType<TypeA>{});
-    print(GenericType<TypeB>{});
+    Print(GenericType<kTypeA>{});
+    Print(GenericType<kTypeB>{});
 
     // style b: reuse a pre-existing tag instance
-    print(genericTypeA);
-    print(genericTypeB);
+    Print(g_generic_type_a);
+    Print(g_generic_type_b);
 
     return 0;
 }

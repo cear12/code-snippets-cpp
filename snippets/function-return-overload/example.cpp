@@ -5,8 +5,8 @@
 #include <string>
 
 struct Foo {
-    int a = 10;
-    int b = 20;
+    int a_ = 10;
+    int b_ = 20;
 };
 
 struct Func {
@@ -19,7 +19,7 @@ int main() {
     std::cout << static_cast<std::string>(Func()) << "\n"; // context: std::string
     std::cout << static_cast<unsigned>(Func()) << "\n";     // context: unsigned
 
-    auto val = Foo(Func()).a; // context: Foo
+    auto val = Foo(Func()).a_; // context: Foo
     std::cout << val << "\n";
 
     return 0;

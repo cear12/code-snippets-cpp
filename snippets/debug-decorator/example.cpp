@@ -26,11 +26,11 @@ private:
 };
 
 template <typename Callable>
-auto decorate_debug(const Callable& c, const char* label) {
+auto DecorateDebug(const Callable& c, const char* label) {
     return DebugDecorator<Callable>(c, label);
 }
 
-int subtract(int a, int b) {
+int Subtract(int a, int b) {
     return a - b;
 }
 
@@ -43,16 +43,16 @@ struct RandomRatio {
 int main() {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
-    auto decoratedSubtract = decorate_debug(subtract, "subtract()");
-    decoratedSubtract(5, 2);
+    auto decorated_subtract = DecorateDebug(Subtract, "subtract()");
+    decorated_subtract(5, 2);
 
-    RandomRatio randomRatio;
-    auto decoratedRatio = decorate_debug(randomRatio, "rand/rand");
-    decoratedRatio();
-    decoratedRatio();
+    RandomRatio random_ratio;
+    auto decorated_ratio = DecorateDebug(random_ratio, "rand/rand");
+    decorated_ratio();
+    decorated_ratio();
 
-    auto decoratedLambda = decorate_debug([](int t, int j) { return t + j; }, "t+j");
-    decoratedLambda(5, 3);
+    auto decorated_lambda = DecorateDebug([](int t, int j) { return t + j; }, "t+j");
+    decorated_lambda(5, 3);
 
     return 0;
 }

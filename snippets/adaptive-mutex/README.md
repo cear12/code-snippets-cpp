@@ -10,10 +10,10 @@ strategy at runtime, in three escalating phases:
    (>80% success rate) and shrinks when it usually isn't (<30%).
 3. **Sleeping wait**: once the spin budget is exhausted, back off to
    `std::this_thread::sleep_for`, doubling the sleep duration each retry
-   (capped), and mark the mutex `LOCKED_WITH_WAITERS` so `unlock()` can
+   (capped), and mark the mutex `kLockedWithWaiters` so `Unlock()` can
    tell contended and uncontended release apart.
 
-Roughly once every 256 acquisitions, `adapt_parameters()` looks at the
+Roughly once every 256 acquisitions, `AdaptParameters()` looks at the
 last second's statistics and adjusts `spin_limit_` and
 `base_sleep_duration_` for the next period -- the mutex tunes its own
 spin/sleep trade-off to the contention pattern it's actually
@@ -21,11 +21,11 @@ experiencing, rather than using one fixed policy for every workload.
 
 ## Bug fixed
 
-`try_spin_lock()` was declared `const` but calls
+`TrySpinLock()` was declared `const` but calls
 `state_.compare_exchange_weak(...)`, which mutates `state_` -- and unlike
 the statistics counters (`total_acquisitions_`, `spin_limit_`, etc., all
-correctly marked `mutable` since `adapt_parameters() const` and
-`get_statistics() const` need to touch them), `state_` itself is not
+correctly marked `mutable` since `AdaptParameters() const` and
+`GetStatistics() const` need to touch them), `state_` itself is not
 `mutable`, since normal lock-acquiring code always runs through a
 non-const `AdaptiveMutex&`. That combination -- `const` method, mutating
 call, non-`mutable` member -- doesn't compile ("passing `const
@@ -39,10 +39,10 @@ again -- `-Wunused-variable`).
 
 ## Known limitation (by design, not a bug)
 
-`LOCKED_WITH_WAITERS` is tracked correctly but doesn't gate a real OS-level
+`kLockedWithWaiters` is tracked correctly but doesn't gate a real OS-level
 wait/wake (no futex, no condition variable): a thread in the sleeping
 phase busy-polls `state_` on a timer regardless of whether it marked
 itself a waiter. A production implementation would use this state to
 back a `std::atomic::wait`/`notify_one` (C++20) or platform futex so
-`unlock()` can wake a sleeper immediately instead of it discovering the
+`Unlock()` can wake a sleeper immediately instead of it discovering the
 unlock on its next timed poll.

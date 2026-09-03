@@ -2,7 +2,7 @@
 
 A `Task<T>` coroutine type (usable as `Task<int>`, `Task<void>`, etc.) run
 by a `CoroutineScheduler` that owns a pool of worker threads, each with
-its own local queue; `schedule()`/`delay()`/`run_on_thread_pool()` are
+its own local queue; `Schedule()`/`Delay()`/`RunOnThreadPool()` are
 awaitables a coroutine `co_await`s to hop onto the scheduler, sleep
 without blocking a worker thread, or offload blocking work, respectively.
 Workers that run out of local work steal from another worker's queue
@@ -68,16 +68,16 @@ unexplained second name for the same thing.
 
 ## Known limitation (documented, not fixed)
 
-`schedule()` always pushes directly onto a worker's *local* queue
-(round-robin) and calls `worker->condition.notify_one()` -- but no code
-anywhere actually `wait()`s on a `WorkerThread::condition`, and nothing
-ever pushes onto `global_queue`. So a worker whose local queue just went
+`Schedule()` always pushes directly onto a worker's *local* queue
+(round-robin) and calls `worker->condition_.notify_one()` -- but no code
+anywhere actually `wait()`s on a `WorkerThread::condition_`, and nothing
+ever pushes onto `global_queue_`. So a worker whose local queue just went
 empty, and who fails to steal from anyone else, always falls through to a
-10ms `wait_for` on `global_condition` before it loops back around --
+10ms `wait_for` on `global_condition_` before it loops back around --
 harmless (every scheduled task still runs, worker-to-worker stealing
 still works), but it means an idle worker can take up to ~10ms to notice
 new local work instead of waking immediately. Left as a documented
 characteristic rather than rewired, since fixing it properly (waiting on
 each worker's own condition variable, with a real producer for
-`global_queue`) is a bigger redesign than this cleanup pass's bug-fixing
+`global_queue_`) is a bigger redesign than this cleanup pass's bug-fixing
 scope.

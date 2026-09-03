@@ -6,13 +6,13 @@
 #include <memory>
 
 struct Good : std::enable_shared_from_this<Good> {
-    std::shared_ptr<Good> createAnotherHandle() {
+    std::shared_ptr<Good> CreateAnotherHandle() {
         return shared_from_this(); // shares the SAME control block
     }
 };
 
 struct Bad {
-    std::shared_ptr<Bad> createAnotherHandle() {
+    std::shared_ptr<Bad> CreateAnotherHandle() {
         return std::shared_ptr<Bad>(this); // a NEW, independent control block
     }
 };
@@ -20,13 +20,13 @@ struct Bad {
 int main() {
     // Good: both handles share one control block, refcount reflects reality.
     std::shared_ptr<Good> g1(new Good);
-    std::shared_ptr<Good> g2 = g1->createAnotherHandle();
+    std::shared_ptr<Good> g2 = g1->CreateAnotherHandle();
     std::cout << "Good: g1.use_count() = " << g1.use_count()
               << ", g2.use_count() = " << g2.use_count() << " (both should agree: 2)\n";
 
     // Bad: two independent control blocks for the same object.
     std::shared_ptr<Bad> b1(new Bad);
-    std::shared_ptr<Bad>* b2 = new std::shared_ptr<Bad>(b1->createAnotherHandle());
+    std::shared_ptr<Bad>* b2 = new std::shared_ptr<Bad>(b1->CreateAnotherHandle());
     std::cout << "Bad: b1.use_count() = " << b1.use_count()
               << ", b2->use_count() = " << b2->use_count()
               << " (both report 1: neither control block knows about the other)\n";

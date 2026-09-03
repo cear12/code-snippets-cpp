@@ -15,34 +15,34 @@ template <typename T>
 class LockFreeStack {
 private:
     struct Node {
-        std::atomic<T*> data;
-        std::atomic<Node*> next;
+        std::atomic<T*> data_;
+        std::atomic<Node*> next_;
 
-        Node() : data(nullptr), next(nullptr) {}
+        Node() : data_(nullptr), next_(nullptr) {}
     };
 
-    std::atomic<Node*> head;
+    std::atomic<Node*> head_;
 
     // Hazard pointers: protect against the ABA / use-after-free problem
     // that comes from freeing a node while another thread might still be
     // about to dereference it.
-    static constexpr int MAX_THREADS = 100;
+    static constexpr int kMaxThreads = 100;
     struct HazardPointer {
-        std::atomic<std::thread::id> id;
-        std::atomic<Node*> pointer;
+        std::atomic<std::thread::id> id_;
+        std::atomic<Node*> pointer_;
     };
 
-    static std::array<HazardPointer, MAX_THREADS> hazard_pointers;
-    static std::atomic<Node*> to_be_deleted;
+    static std::array<HazardPointer, kMaxThreads> g_hazard_pointers;
+    static std::atomic<Node*> g_to_be_deleted;
 
-    static HazardPointer* get_hazard_pointer_for_current_thread() {
+    static HazardPointer* GetHazardPointerForCurrentThread() {
         thread_local static HazardPointer* hp = nullptr;
 
         if (!hp) {
             auto thread_id = std::this_thread::get_id();
-            for (auto& hazard : hazard_pointers) {
+            for (auto& hazard : g_hazard_pointers) {
                 std::thread::id default_id;
-                if (hazard.id.compare_exchange_strong(default_id, thread_id)) {
+                if (hazard.id_.compare_exchange_strong(default_id, thread_id)) {
                     hp = &hazard;
                     break;
                 }
@@ -51,9 +51,9 @@ private:
         return hp;
     }
 
-    static bool is_pointer_hazardous(Node* ptr) {
-        for (const auto& hazard : hazard_pointers) {
-            if (hazard.pointer.load() == ptr) {
+    static bool IsPointerHazardous(Node* ptr) {
+        for (const auto& hazard : g_hazard_pointers) {
+            if (hazard.pointer_.load() == ptr) {
                 return true;
             }
         }
@@ -61,26 +61,26 @@ private:
     }
 
     // Pushes `node` onto the to_be_deleted retire list.
-    static void retire(Node* node) {
-        Node* old_retired_head = to_be_deleted.load();
+    static void Retire(Node* node) {
+        Node* old_retired_head = g_to_be_deleted.load();
         do {
-            node->next.store(old_retired_head);
-        } while (!to_be_deleted.compare_exchange_weak(old_retired_head, node));
+            node->next_.store(old_retired_head);
+        } while (!g_to_be_deleted.compare_exchange_weak(old_retired_head, node));
     }
 
-    static void delete_nodes_no_hazards() {
-        Node* current = to_be_deleted.exchange(nullptr);
+    static void DeleteNodesNoHazards() {
+        Node* current = g_to_be_deleted.exchange(nullptr);
 
         while (current) {
-            Node* next = current->next.load();
+            Node* next = current->next_.load();
 
-            if (!is_pointer_hazardous(current)) {
-                delete current->data.load();
+            if (!IsPointerHazardous(current)) {
+                delete current->data_.load();
                 delete current;
             } else {
                 // Still protected by someone's hazard pointer: put it
                 // back on the retire list for a later pass.
-                retire(current);
+                Retire(current);
             }
 
             current = next;
@@ -88,47 +88,47 @@ private:
     }
 
 public:
-    LockFreeStack() : head(nullptr) {}
+    LockFreeStack() : head_(nullptr) {}
 
     ~LockFreeStack() {
-        while (Node* old_head = head.load()) {
-            head.store(old_head->next.load());
-            delete old_head->data.load();
+        while (Node* old_head = head_.load()) {
+            head_.store(old_head->next_.load());
+            delete old_head->data_.load();
             delete old_head;
         }
 
-        delete_nodes_no_hazards();
+        DeleteNodesNoHazards();
     }
 
     LockFreeStack(const LockFreeStack&) = delete;
     LockFreeStack& operator=(const LockFreeStack&) = delete;
 
-    void push(T item) {
+    void Push(T item) {
         Node* new_node = new Node;
         T* data = new T(std::move(item));
-        new_node->data.store(data);
+        new_node->data_.store(data);
 
-        Node* current_head = head.load();
+        Node* current_head = head_.load();
         do {
-            new_node->next.store(current_head);
-        } while (!head.compare_exchange_weak(current_head, new_node));
+            new_node->next_.store(current_head);
+        } while (!head_.compare_exchange_weak(current_head, new_node));
     }
 
-    std::unique_ptr<T> pop() {
-        HazardPointer* hp = get_hazard_pointer_for_current_thread();
+    std::unique_ptr<T> Pop() {
+        HazardPointer* hp = GetHazardPointerForCurrentThread();
         if (!hp) {
             return nullptr; // No hazard-pointer slots available (see README's known limitation).
         }
 
-        Node* old_head = head.load();
+        Node* old_head = head_.load();
 
         for (;;) {
             // Protect old_head, then re-verify head hasn't already moved
             // on before trusting that protection.
             Node* protected_candidate = old_head;
-            hp->pointer.store(old_head);
+            hp->pointer_.store(old_head);
 
-            old_head = head.load();
+            old_head = head_.load();
             if (old_head != protected_candidate) {
                 // head changed between our load and our hazard-pointer
                 // store: restart the protect-then-verify sequence with
@@ -138,43 +138,43 @@ public:
             }
 
             if (!old_head) {
-                hp->pointer.store(nullptr);
+                hp->pointer_.store(nullptr);
                 return nullptr;
             }
 
-            if (head.compare_exchange_weak(old_head, old_head->next.load())) {
+            if (head_.compare_exchange_weak(old_head, old_head->next_.load())) {
                 break;
             }
         }
 
-        hp->pointer.store(nullptr);
+        hp->pointer_.store(nullptr);
 
         std::unique_ptr<T> result;
-        if (old_head->data.load()) {
-            result = std::make_unique<T>(*old_head->data.load());
+        if (old_head->data_.load()) {
+            result = std::make_unique<T>(*old_head->data_.load());
         }
 
         // Retire rather than delete immediately: another thread's hazard
         // pointer may still be protecting old_head.
-        retire(old_head);
+        Retire(old_head);
 
         // Periodically try to reclaim nodes that are no longer hazardous.
         if (std::hash<std::thread::id>{}(std::this_thread::get_id()) % 10 == 0) {
-            delete_nodes_no_hazards();
+            DeleteNodesNoHazards();
         }
 
         return result;
     }
 
-    bool empty() const { return head.load() == nullptr; }
+    bool Empty() const { return head_.load() == nullptr; }
 };
 
 template <typename T>
-std::array<typename LockFreeStack<T>::HazardPointer, LockFreeStack<T>::MAX_THREADS>
-    LockFreeStack<T>::hazard_pointers = {};
+std::array<typename LockFreeStack<T>::HazardPointer, LockFreeStack<T>::kMaxThreads>
+    LockFreeStack<T>::g_hazard_pointers = {};
 
 template <typename T>
-std::atomic<typename LockFreeStack<T>::Node*> LockFreeStack<T>::to_be_deleted{nullptr};
+std::atomic<typename LockFreeStack<T>::Node*> LockFreeStack<T>::g_to_be_deleted{nullptr};
 
 int main() {
     LockFreeStack<int> stack;
@@ -188,7 +188,7 @@ int main() {
     for (int p = 0; p < kProducers; ++p) {
         producers.emplace_back([&stack, p] {
             for (int i = 0; i < kItemsPerProducer; ++i) {
-                stack.push(p * kItemsPerProducer + i);
+                stack.Push(p * kItemsPerProducer + i);
             }
         });
     }
@@ -198,8 +198,8 @@ int main() {
     std::vector<std::thread> consumers;
     for (int c = 0; c < kConsumers; ++c) {
         consumers.emplace_back([&stack, &popped_count] {
-            while (!stack.empty()) {
-                if (auto value = stack.pop()) {
+            while (!stack.Empty()) {
+                if (auto value = stack.Pop()) {
                     (void)value;
                     popped_count.fetch_add(1, std::memory_order_relaxed);
                 }
@@ -210,9 +210,9 @@ int main() {
 
     std::cout << "Pushed " << kExpected << " items across " << kProducers << " producers.\n";
     std::cout << "Popped " << popped_count.load() << " items across " << kConsumers << " consumers.\n";
-    std::cout << "Stack empty at end: " << std::boolalpha << stack.empty() << "\n";
+    std::cout << "Stack empty at end: " << std::boolalpha << stack.Empty() << "\n";
 
-    bool ok = popped_count.load() == kExpected && stack.empty();
+    bool ok = popped_count.load() == kExpected && stack.Empty();
     std::cout << (ok ? "PASS" : "FAIL") << "\n";
 
     return ok ? 0 : 1;
