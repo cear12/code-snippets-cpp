@@ -34,6 +34,18 @@ Requires a C++17 compiler and CMake 3.16+. One target
 it uses the `<coroutine>` header -- see that snippet's `CMakeLists.txt`
 override.
 
+### Building in Visual Studio
+
+With 48 independent `snippet__<name>` executables and no single "main app",
+Visual Studio's Open Folder / CMake integration has nothing to pick as a
+default startup item. Without one, pressing **Debug/Run** (not Build) pops
+a blocking "Select Startup Item" dialog -- easy to mistake for the project
+failing to build, even though **Build > Build All** (Ctrl+Shift+B) succeeds
+regardless of what's selected there. `CMakePresets.json` sets
+`CMAKE_VS_STARTUP_PROJECT` to `snippet__adaptive-mutex` so Debug/Run works
+immediately too; pick a different target from the dropdown next to the Run
+button to debug any of the others.
+
 ### Boost
 
 Two snippets (`boost-copy-filtered`, `boost-quick-allocator`) use Boost
