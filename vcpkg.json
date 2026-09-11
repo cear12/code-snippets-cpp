@@ -1,0 +1,10 @@
+{
+  "name": "code-snippets-cpp",
+  "version-string": "0.0.0",
+  "dependencies": [
+    "boost-range",
+    "boost-smart-ptr",
+    "boost-circular-buffer"
+  ],
+  "builtin-baseline": "40dd49b0c9c7dbd79dc64cad5e82308eae04f67f"
+}
