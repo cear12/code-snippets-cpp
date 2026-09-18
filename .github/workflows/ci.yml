@@ -24,9 +24,11 @@ jobs:
       tsan: true
 
   windows:
-    # Windows: Boost via vcpkg manifest (vcpkg.json), binaries cached between runs.
+    # Windows: Boost via the vcpkg that ships with the runner image (manifest mode,
+    # driven by vcpkg.json). lukka/run-vcpkg is not used: it tried to git-checkout a
+    # vcpkg directory inside the repo and failed with "pathspec ... did not match".
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
     steps:
@@ -42,13 +44,12 @@ jobs:
           key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
           restore-keys: vcpkg-${{ runner.os }}-
 
-      - uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: 40dd49b0c9c7dbd79dc64cad5e82308eae04f67f
-
       - name: Configure
         shell: bash
-        run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+        run: |
+          toolchain="${VCPKG_INSTALLATION_ROOT//\\//}/scripts/buildsystems/vcpkg.cmake"
+          echo "using $toolchain"
+          cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$toolchain"
 
       - name: Build
         run: cmake --build build --config Release --parallel

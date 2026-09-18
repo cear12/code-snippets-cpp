@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <boost/range/adaptor/filtered.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/copy.hpp>
 
 struct Person {
