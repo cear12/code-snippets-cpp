@@ -11,6 +11,13 @@ endif()
 
 find_package(Threads REQUIRED)
 
+# MSVC's legacy lambda parser reports C3493 for constexpr locals read inside a
+# lambda without capture, which is valid C++17 (they are not odr-used).
+# /Zc:lambda switches to the conforming parser.
+if(MSVC)
+  add_compile_options(/Zc:lambda)
+endif()
+
 # Boost is only needed by the two snippets under boost-*/ (boost-copy-filtered,
 # boost-quick-allocator). It's optional here: if it isn't installed locally,
 # those two targets are skipped with a warning instead of failing the whole

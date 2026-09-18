@@ -1,6 +1,7 @@
 // to_underlying: converts an enum (typically enum class) value to its
 // underlying integer type -- standardized as std::to_underlying in C++23,
 // commonly hand-rolled before that.
+#include <cstdint>
 #include <iostream>
 #include <type_traits>
 
