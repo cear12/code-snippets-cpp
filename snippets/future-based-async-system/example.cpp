@@ -193,7 +193,18 @@ public:
     auto result_future = new_promise->GetFuture();
 
     state_->SetContinuation(
-        [state = state_, func = std::forward<F>(func), new_promise]() mutable {
+        [weak_state = std::weak_ptr<SharedState>(state_),
+         func = std::forward<F>(func), new_promise]() mutable {
+          // BUG FIX: the state owns this continuation, so capturing the
+          // state by shared_ptr made a cycle -- a future whose continuation
+          // never runs (an abandoned branch of WhenAny, for instance) kept
+          // its own shared state alive forever. Weak here, locked when the
+          // continuation actually runs; the state is alive at that point
+          // because it is the one invoking us.
+          auto state = weak_state.lock();
+          if (!state) {
+            return;
+          }
           try {
             Future<T> current_future(state);
 
@@ -226,8 +237,19 @@ public:
     auto result_future = new_promise->GetFuture();
 
     state_->SetContinuation(
-        [state = state_, func = std::forward<F>(func), new_promise,
+        [weak_state = std::weak_ptr<SharedState>(state_),
+         func = std::forward<F>(func), new_promise,
          executor = std::forward<Executor>(executor)]() mutable {
+          // BUG FIX: the state owns this continuation, so capturing the
+          // state by shared_ptr made a cycle -- a future whose continuation
+          // never runs (an abandoned branch of WhenAny, for instance) kept
+          // its own shared state alive forever. Weak here, locked when the
+          // continuation actually runs; the state is alive at that point
+          // because it is the one invoking us.
+          auto state = weak_state.lock();
+          if (!state) {
+            return;
+          }
           executor([state, func = std::move(func), new_promise]() mutable {
             try {
               Future<T> current_future(state);
@@ -378,7 +400,18 @@ public:
     auto result_future = new_promise->GetFuture();
 
     state_->SetContinuation(
-        [state = state_, func = std::forward<F>(func), new_promise]() mutable {
+        [weak_state = std::weak_ptr<SharedState>(state_),
+         func = std::forward<F>(func), new_promise]() mutable {
+          // BUG FIX: the state owns this continuation, so capturing the
+          // state by shared_ptr made a cycle -- a future whose continuation
+          // never runs (an abandoned branch of WhenAny, for instance) kept
+          // its own shared state alive forever. Weak here, locked when the
+          // continuation actually runs; the state is alive at that point
+          // because it is the one invoking us.
+          auto state = weak_state.lock();
+          if (!state) {
+            return;
+          }
           try {
             Future<void> current_future(state);
 
