@@ -41,6 +41,10 @@ template <> struct PromiseResult<void> {
 
 } // namespace detail
 
+// Defined below, next to the scheduler singleton: a finished coroutine tells
+// the scheduler it is done from its own final awaiter (see FinalAwaiter).
+inline void NotifyTaskFinished() noexcept;
+
 // Task -- the coroutine return type.
 template <typename T = void> class Task {
 public:
@@ -50,7 +54,29 @@ public:
     }
 
     std::suspend_never initial_suspend() { return {}; }
-    std::suspend_always final_suspend() noexcept { return {}; }
+
+    // BUG FIX: publish completion through an atomic with release semantics.
+    // A waiter polling from another thread used to read handle.done(), which
+    // is not synchronised with the worker thread that produced result_ --
+    // done() could be seen as true while result_ was still null.
+    //
+    // The flag is set from the final awaiter's await_suspend rather than from
+    // final_suspend() itself: at that point the frame is fully suspended, so
+    // a waiter that sees the flag cannot race with the last writes the
+    // coroutine machinery makes to the frame (it would destroy() underneath).
+    struct FinalAwaiter {
+      promise_type *promise;
+      bool await_ready() const noexcept { return false; }
+      void await_suspend(std::coroutine_handle<>) const noexcept {
+        NotifyTaskFinished();
+        // Published last: the moment a waiter sees this, it may destroy the
+        // frame, so nothing may touch the coroutine afterwards.
+        promise->completed_.store(true, std::memory_order_release);
+      }
+      void await_resume() const noexcept {}
+    };
+
+    FinalAwaiter final_suspend() noexcept { return FinalAwaiter{this}; }
 
     void unhandled_exception() { exception_ = std::current_exception(); }
 
@@ -61,6 +87,7 @@ public:
     }
 
     std::exception_ptr exception_;
+    std::atomic<bool> completed_{false};
   };
 
   using HandleType = std::coroutine_handle<promise_type>;
@@ -88,7 +115,7 @@ public:
   T Get()
     requires(!std::is_void_v<T>)
   {
-    if (!handle_ || !handle_.done()) {
+    if (!IsReady()) {
       throw std::runtime_error("Task not completed");
     }
     if (handle_.promise().exception_) {
@@ -100,7 +127,7 @@ public:
   void Get()
     requires std::is_void_v<T>
   {
-    if (!handle_ || !handle_.done()) {
+    if (!IsReady()) {
       throw std::runtime_error("Task not completed");
     }
     if (handle_.promise().exception_) {
@@ -108,7 +135,10 @@ public:
     }
   }
 
-  bool IsReady() const { return handle_ && handle_.done(); }
+  bool IsReady() const {
+    return handle_ &&
+           handle_.promise().completed_.load(std::memory_order_acquire);
+  }
 
   HandleType handle_;
 };
@@ -124,7 +154,12 @@ private:
     std::condition_variable condition_;
     std::atomic<bool> stop_requested_{false};
 
-    WorkerThread(CoroutineScheduler *scheduler, size_t id) {
+    WorkerThread() = default;
+
+    // Starting the thread is separate from construction on purpose: a worker
+    // reads workers_ in TryStealWork(), so no thread may run until the whole
+    // vector is in place.
+    void Start(CoroutineScheduler *scheduler, size_t id) {
       thread_ = std::thread(
           [this, scheduler, id] { scheduler->WorkerLoop(this, id); });
     }
@@ -144,6 +179,7 @@ private:
   std::atomic<bool> shutdown_{false};
   std::atomic<size_t> active_tasks_{0};
   std::atomic<size_t> next_worker_{0};
+  std::atomic<size_t> pending_helpers_{0};
 
   void WorkerLoop(WorkerThread *worker, size_t worker_id) {
     while (!shutdown_.load()) {
@@ -203,19 +239,36 @@ private:
   }
 
   void ExecuteCoroutine(std::coroutine_handle<> handle) {
+    // BUG FIX: `handle` must not be touched once resume() returns. If the
+    // coroutine ran to completion, its waiter may already have observed that
+    // and destroyed the frame -- the old `handle.done()` check here was a
+    // use-after-free. Completion is now reported by the final awaiter.
+    //
     // Exceptions from the coroutine body itself are already caught by
     // promise_type::unhandled_exception(); this guards resume() itself.
     try {
       handle.resume();
-      if (handle.done()) {
-        active_tasks_.fetch_sub(1, std::memory_order_relaxed);
-      }
     } catch (...) {
       active_tasks_.fetch_sub(1, std::memory_order_relaxed);
     }
   }
 
 public:
+  void OnTaskFinished() noexcept {
+    active_tasks_.fetch_sub(1, std::memory_order_relaxed);
+  }
+
+  // Delay()/RunOnThreadPool() run work on detached threads that come back and
+  // touch the scheduler. These two calls let the destructor wait for them:
+  // without that, a helper could notify a condition variable that the
+  // destructor is busy destroying.
+  void HelperStarted() noexcept {
+    pending_helpers_.fetch_add(1, std::memory_order_relaxed);
+  }
+  void HelperFinished() noexcept {
+    pending_helpers_.fetch_sub(1, std::memory_order_release);
+  }
+
   explicit CoroutineScheduler(
       size_t num_threads = std::thread::hardware_concurrency()) {
     if (num_threads == 0)
@@ -223,15 +276,37 @@ public:
 
     workers_.reserve(num_threads);
     for (size_t i = 0; i < num_threads; ++i) {
-      workers_.emplace_back(std::make_unique<WorkerThread>(this, i));
+      workers_.emplace_back(std::make_unique<WorkerThread>());
+    }
+    // BUG FIX: only now, with workers_ fully populated, let them run.
+    for (size_t i = 0; i < num_threads; ++i) {
+      workers_[i]->Start(this, i);
     }
   }
 
   ~CoroutineScheduler() {
+    // BUG FIX: let the detached helper threads finish with the scheduler
+    // before any of its members are destroyed.
+    while (pending_helpers_.load(std::memory_order_acquire) > 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
     shutdown_.store(true);
     global_condition_.notify_all();
-    for (auto &worker : workers_)
+    for (auto &worker : workers_) {
+      worker->stop_requested_.store(true);
       worker->condition_.notify_all();
+    }
+
+    // BUG FIX: join every worker BEFORE destroying any of them. A live worker
+    // reaches into its neighbours through TryStealWork(), so tearing the
+    // vector down while threads still run dereferences an already-destroyed
+    // WorkerThread -- an intermittent SEGFAULT at exit under -O2.
+    for (auto &worker : workers_) {
+      if (worker->thread_.joinable())
+        worker->thread_.join();
+    }
+
     workers_.clear();
   }
 
@@ -265,6 +340,8 @@ inline CoroutineScheduler &GetScheduler() {
   return scheduler;
 }
 
+inline void NotifyTaskFinished() noexcept { GetScheduler().OnTaskFinished(); }
+
 // Awaitable that hops the current coroutine onto the scheduler.
 struct ScheduleAwaitable {
   bool await_ready() const noexcept { return false; }
@@ -285,9 +362,12 @@ struct DelayAwaitable {
   void await_suspend(std::coroutine_handle<> handle) const {
     // BUG FIX: capture duration by value rather than reading it back
     // through `this` after the sleep -- see README.md.
+    GetScheduler().HelperStarted();
     std::thread([handle, sleep_duration = duration_] {
       std::this_thread::sleep_for(sleep_duration);
-      GetScheduler().Schedule(handle);
+      auto &scheduler = GetScheduler();
+      scheduler.Schedule(handle);
+      scheduler.HelperFinished();
     }).detach();
   }
 
@@ -309,6 +389,7 @@ template <typename F> struct ThreadPoolAwaitable {
   bool await_ready() const noexcept { return false; }
 
   void await_suspend(std::coroutine_handle<> handle) const {
+    GetScheduler().HelperStarted();
     std::thread([handle, func = function_]() mutable {
       try {
         func();
@@ -316,7 +397,9 @@ template <typename F> struct ThreadPoolAwaitable {
         // Surfaced to the caller via promise_type::unhandled_exception
         // when the coroutine resumes and rethrows internally.
       }
-      GetScheduler().Schedule(handle);
+      auto &scheduler = GetScheduler();
+      scheduler.Schedule(handle);
+      scheduler.HelperFinished();
     }).detach();
   }
 
