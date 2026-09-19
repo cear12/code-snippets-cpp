@@ -12,7 +12,11 @@ struct Good : std::enable_shared_from_this<Good> {
 };
 
 struct Bad {
-  std::shared_ptr<Bad> CreateAnotherHandle() {
+  // The anti-pattern, kept here to be read, not run: handing out a
+  // shared_ptr built from a raw `this` creates a SECOND, independent
+  // control block, and both blocks eventually call delete on the same
+  // object.
+  std::shared_ptr<Bad> CreateAnotherHandleUnsafe() {
     return std::shared_ptr<Bad>(this); // a NEW, independent control block
   }
 };
@@ -25,20 +29,19 @@ int main() {
             << ", g2.use_count() = " << g2.use_count()
             << " (both should agree: 2)\n";
 
-  // Bad: two independent control blocks for the same object.
+  // Bad: two independent control blocks for the same object. The second
+  // one is created with a no-op deleter, which is what makes this demo
+  // safe to run: the point -- two control blocks that each believe they
+  // are the only owner -- is unchanged, but only b1 ever frees the
+  // object. Calling CreateAnotherHandleUnsafe() here instead would arm a
+  // double free (and leaking the second handle to dodge it, as this demo
+  // used to, trips LeakSanitizer in CI).
   std::shared_ptr<Bad> b1(new Bad);
-  std::shared_ptr<Bad> *b2 =
-      new std::shared_ptr<Bad>(b1->CreateAnotherHandle());
+  std::shared_ptr<Bad> b2(b1.get(), [](Bad *) {});
   std::cout
       << "Bad: b1.use_count() = " << b1.use_count()
-      << ", b2->use_count() = " << b2->use_count()
+      << ", b2.use_count() = " << b2.use_count()
       << " (both report 1: neither control block knows about the other)\n";
-  // NOTE: (*b2)->use_count() above actually calls use_count() through
-  // Bad's shared_ptr, showing 1; deliberately NOT calling `delete b2` or
-  // letting a local shared_ptr<Bad> for it go out of scope here -- doing
-  // so alongside b1's own destruction would double-free the same Bad
-  // object. b2 is intentionally leaked so this demo is safe to run; b1
-  // alone destroys the object exactly once, normally, when main() returns.
 
   return 0;
 }
